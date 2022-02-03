@@ -22,15 +22,14 @@ func main() {
 	log_wrt := io.MultiWriter(os.Stdout, logfile)
 	logger := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
 
-	helloHandler := handlers.NewHello(logger)
 	goodbyeHandler := handlers.NewGoodbye(logger)
 	productHandler := handlers.NewProducts(logger)
 	logger.Println("Starting Microservice Application")
 
 	serverMux := http.NewServeMux()
-	serverMux.Handle("/", helloHandler)
 	serverMux.Handle("/goodbye", goodbyeHandler)
 	serverMux.Handle("/products", productHandler)
+	serverMux.Handle("/products/", productHandler)
 
 	srv := &http.Server{
 		Addr:         ":9090",
