@@ -12,14 +12,16 @@ import (
 )
 
 func main() {
-
+	var log_wrt io.Writer
 	logfile, err := os.OpenFile(".\\microservice-log.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("Error: Unable to open logfile\n")
+		log.Printf("Error: Unable to open logfile\n")
+		log_wrt = io.MultiWriter(os.Stdout)
+	} else {
+		defer logfile.Close()
+		log_wrt = io.MultiWriter(os.Stdout, logfile)
 	}
-	defer logfile.Close()
 
-	log_wrt := io.MultiWriter(os.Stdout, logfile)
 	logger := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
 
 	goodbyeHandler := handlers.NewGoodbye(logger)
