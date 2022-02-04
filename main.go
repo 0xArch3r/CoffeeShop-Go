@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -24,14 +26,19 @@ func main() {
 
 	logger := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
 
-	goodbyeHandler := handlers.NewGoodbye(logger)
 	productHandler := handlers.NewProducts(logger)
 	logger.Println("Starting Microservice Application")
 
-	serverMux := http.NewServeMux()
-	serverMux.Handle("/goodbye", goodbyeHandler)
-	serverMux.Handle("/products", productHandler)
-	serverMux.Handle("/products/", productHandler)
+	serverMux := mux.NewRouter()
+
+	getRouter := serverMux.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/products", productHandler.GetProducts)
+
+	putRouter := serverMux.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/products/{id:[0-9]+}", productHandler.UpdateProduct)
+
+	postRouter := serverMux.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/products", productHandler.AddProduct)
 
 	srv := &http.Server{
 		Addr:         ":9090",
