@@ -2,7 +2,9 @@ package main
 
 import (
 	"MicroService-Go/handlers"
+	"MicroService-Go/logutil"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -24,10 +26,11 @@ func main() {
 		log_wrt = io.MultiWriter(os.Stdout, logfile)
 	}
 
-	logger := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
+	lgr := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
+	logger := &logutil.MyLogger{Lgr: *lgr, Log_level: 10}
 
 	productHandler := handlers.NewProducts(logger)
-	logger.Println("Starting Microservice Application")
+	logger.WriteLog("Starting Microservice Application", 10)
 
 	serverMux := mux.NewRouter()
 
@@ -36,9 +39,11 @@ func main() {
 
 	putRouter := serverMux.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/products/{id:[0-9]+}", productHandler.UpdateProduct)
+	putRouter.Use(productHandler.MiddlewareValidateProduct)
 
 	postRouter := serverMux.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/products", productHandler.AddProduct)
+	postRouter.Use(productHandler.MiddlewareValidateProduct)
 
 	srv := &http.Server{
 		Addr:         ":9090",
@@ -51,7 +56,7 @@ func main() {
 	go func() {
 		err := srv.ListenAndServe()
 		if err != nil {
-			logger.Fatal(err)
+			logger.Lgr.Fatal(err)
 		}
 	}()
 
@@ -60,7 +65,7 @@ func main() {
 	signal.Notify(sigChan, os.Kill)
 
 	sig := <-sigChan
-	logger.Println("Received terminate, graceful shutdown", sig)
+	logger.WriteLog(fmt.Sprintln("Received terminate, graceful shutdown", sig), 10)
 
 	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	srv.Shutdown(tc)
