@@ -40,10 +40,10 @@ func (p *Products) AddProduct(rw http.ResponseWriter, req *http.Request) {
 	prod := req.Context().Value(KeyProduct{}).(data.Product)
 
 	data.AddProduct(&prod)
-	p.logUtil.WriteLog(fmt.Sprintf("Prod: %#v", prod), 10)
+	p.logUtil.WriteLog(fmt.Sprintf("Prod: %#v", prod), 41)
 
 	if err := prod.ToJSON(rw); err != nil {
-		p.logUtil.WriteLog(fmt.Sprintf("Unable to marshal json"), 10)
+		p.logUtil.WriteLog("Unable to marshal json", 10)
 		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

@@ -9,6 +9,6 @@ type MyLogger struct {
 
 func (l *MyLogger) WriteLog(message string, log_level int) {
 	if log_level <= l.Log_level {
-		l.Lgr.Printf("[%v] %v\n", log_level, message)
+		l.Lgr.Printf("- %v - %v\n", log_level, message)
 	}
 }
