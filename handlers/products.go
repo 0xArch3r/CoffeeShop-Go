@@ -1,3 +1,17 @@
+// Package classification of Product API
+//
+// Documentation for Product API
+//
+// Schemes: http
+// BasePath: /products
+// Version: 1.0
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+// - application/json
+// swagger:meta
 package handlers
 
 import (
@@ -23,7 +37,6 @@ func NewProducts(l *logutil.MyLogger) *Products {
 }
 
 /* This section is for utility functions for CRUD operations (Methods of the Products Struct/Class */
-
 func (p *Products) GetProducts(rw http.ResponseWriter, req *http.Request) {
 	p.logUtil.WriteLog(fmt.Sprintf("Handling %v request for %v", req.Method, req.URL.Path), 10)
 	productList := data.GetProducts()
@@ -65,14 +78,32 @@ func (p *Products) UpdateProduct(rw http.ResponseWriter, req *http.Request) {
 			http.Error(rw, "Product not found", http.StatusNotFound)
 			return
 		}
-		errorMsg := "Unable to update product with id: " + strconv.Itoa(id)
-		http.Error(rw, errorMsg, http.StatusInternalServerError)
+		http.Error(rw, fmt.Sprintf("Unable to update product with id: %v", strconv.Itoa(id)), http.StatusInternalServerError)
 		return
 	}
 
 	if err := prod.ToJSON(rw); err != nil {
 		http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 	}
+}
+
+func (p *Products) DeleteProduct(rw http.ResponseWriter, req *http.Request) {
+	p.logUtil.WriteLog(fmt.Sprintf("Handling %v request for %v", req.Method, req.URL.Path), 10)
+	vars := mux.Vars(req)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		p.logUtil.WriteLog("Unable to convert id", 10)
+		http.Error(rw, "Unable to convert id", http.StatusBadRequest)
+	}
+
+	err = data.DeleteProduct(id)
+	if err != nil {
+		p.logUtil.WriteLog(fmt.Sprintf("Unable to delete item with ID %v: %v", id, err), 10)
+		http.Error(rw, fmt.Sprintf("Unable to delete item with ID %v: %v", id, err), http.StatusInternalServerError)
+		return
+	}
+
+	rw.Write([]byte(fmt.Sprintf("Successfully Deleted Product at ID %v", id)))
 }
 
 type KeyProduct struct {
@@ -84,8 +115,15 @@ func (p *Products) MiddlewareValidateProduct(next http.Handler) http.Handler {
 
 		err := prod.FromJSON(r.Body)
 		if err != nil {
-			p.logUtil.WriteLog(fmt.Sprintf("[ERROR] Unable to deserialize product", err), 10)
+			p.logUtil.WriteLog(fmt.Sprintf("[ERROR] Unable to deserialize product: %s", err), 10)
 			http.Error(rw, "Error reading product", http.StatusBadRequest)
+			return
+		}
+
+		err = prod.Validate()
+		if err != nil {
+			p.logUtil.WriteLog(fmt.Sprintf("[ERROR] Failed Object Validation: %s", err), 41)
+			http.Error(rw, fmt.Sprintf("Error validating product: %s", err), http.StatusBadRequest)
 			return
 		}
 

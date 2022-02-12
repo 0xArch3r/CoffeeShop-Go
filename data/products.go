@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
 type Product struct {
 	ID          int     `json:"id"`
-	Name        string  `json:"name"`
+	Name        string  `json:"name" validate:"required"`
 	Description string  `json:"description"`
-	Price       float32 `json:"price"`
-	SKU         string  `json:"sku"`
+	Price       float32 `json:"price" validate:"gt=0"`
+	SKU         string  `json:"sku" validate:"required,sku"`
 	CreatedOn   string  `json:"-"`
 	UpdatedOn   string  `json:"-"`
 	DeletedOn   string  `json:"-"`
@@ -25,6 +28,19 @@ func (p *Product) FromJSON(r io.Reader) error {
 func (p *Product) ToJSON(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	return enc.Encode(p)
+}
+
+func (p *Product) Validate() error {
+	validate := validator.New()
+	validate.RegisterValidation("sku", validateSKU)
+	return validate.Struct(p)
+}
+
+func validateSKU(fl validator.FieldLevel) bool {
+	re := regexp.MustCompile(`^[a-zA-Z]{3}[0-9]{3}$`)
+	matches := re.FindAllString(fl.Field().String(), -1)
+
+	return len(matches) >= 1
 }
 
 type Products []*Product
@@ -50,6 +66,17 @@ func UpdateProduct(id int, p *Product) error {
 	}
 	p.ID = id
 	productList[index] = p
+	return nil
+}
+
+func DeleteProduct(id int) error {
+	_, index, err := findProduct(id)
+	if err != nil {
+		return err
+	}
+	ret := make([]*Product, 0)
+	ret = append(ret, productList[:index]...)
+	productList = append(ret, productList[index+1:]...)
 	return nil
 }
 
@@ -84,7 +111,7 @@ var productList = []*Product{
 		Name:        "Espresso",
 		Description: "Short and Strong without Milk",
 		Price:       1.99,
-		SKU:         "fjd34",
+		SKU:         "fjd345",
 		CreatedOn:   time.Now().UTC().String(),
 		UpdatedOn:   time.Now().UTC().String(),
 	},

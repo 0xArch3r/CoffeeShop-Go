@@ -27,7 +27,7 @@ func main() {
 	}
 
 	lgr := log.New(log_wrt, "[Production-API] ", log.LstdFlags)
-	logger := &logutil.MyLogger{Lgr: *lgr, Log_level: 10}
+	logger := &logutil.MyLogger{Lgr: *lgr, Log_level: 41}
 
 	productHandler := handlers.NewProducts(logger)
 	logger.WriteLog("Starting Microservice Application", 10)
@@ -44,6 +44,9 @@ func main() {
 	postRouter := serverMux.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/products", productHandler.AddProduct)
 	postRouter.Use(productHandler.MiddlewareValidateProduct)
+
+	deleteRouter := serverMux.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/products/{id:[0-9]+}", productHandler.DeleteProduct)
 
 	srv := &http.Server{
 		Addr:         ":9090",
@@ -65,7 +68,7 @@ func main() {
 	signal.Notify(sigChan, os.Kill)
 
 	sig := <-sigChan
-	logger.WriteLog(fmt.Sprintln("Received terminate, graceful shutdown", sig), 10)
+	logger.WriteLog(fmt.Sprintf("Received terminate, graceful shutdown: %v", sig), 10)
 
 	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	srv.Shutdown(tc)
